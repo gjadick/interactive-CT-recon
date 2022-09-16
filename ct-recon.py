@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import imageio
+from PIL import Image
 
 # pop-out plots
 import matplotlib
@@ -14,6 +15,18 @@ im_kwargs = {'cmap':'gray', 'vmin':0}
 data_dir = 'recon_process/'
 mat_files = sorted([data_dir+f for f in os.listdir(data_dir) if 'matrix' in f])  # png
 arr_files = sorted([data_dir+f for f in os.listdir(data_dir) if 'array' in f])  # npy
+
+# camera
+image = Image.open('camera.png').convert('L')
+cam = np.asarray(image)
+cam = cam/np.max(cam)
+cam = -cam + 1
+cy,cx = cam.shape
+print('cam', cx, cy)
+
+cam_width = 100
+cam_length = cam_width*cy/cx
+
 
 # load all the arrays
 arrs = [np.load(f) for f in arr_files] 
@@ -47,7 +60,7 @@ a0 = 30    # degrees
 a_fan = 40 # degrees
 
 # plot image, get ROIs
-fig,[ax,ax2] = plt.subplots(1,2, figsize=[6,3.5], dpi=150)
+fig,[ax,ax2] = plt.subplots(1,2, figsize=[10,7], dpi=200)
 #ax1.axis('off')
 ax2.axis('off')
 fig.tight_layout(pad=0)
@@ -80,26 +93,32 @@ def show_xcat():
 
 
 
-
 # initialize plots
 show_xcat()
 #ax1.imshow(betas[0], **im_kwargs)
 ax2.imshow(arrs[0], cmap='gray')
 ax2.set_title('Output image')
 
-signal = plt.ginput(1)
+signal = plt.ginput(1, timeout=-1)
 x1, y1 = signal[0][0], signal[0][1]
 while x1<Nx+dN-pad and y1>-dN+pad:
     ax.cla()
+    
+
+    #ax.imshow(cam, extent=(x1-cam_width, x1+cam_width, y1+cam_length, y1-cam_length), cmap='gray')
     show_xcat()
 
     ax.plot(x1, y1, '+', color='r', markersize=5)
     a0 = get_angle([0,-1], [x1-Nx/2,y1-Ny/2])
     if x1>Nx/2:
-        a0=-a0 
+        a0=-a0 + 360
+        
+    for angle in range(0,int(a0)):
+        t0 = -angle*np.pi/180
+        x0 = Nx/2 + R0*np.sin(t0)
+        y0 = Ny/2 - R0*np.cos(t0)
+        ax.plot(x0, y0, 'o', color='r', markersize=5)
 
-
-    
     col='cornflowerblue'
     # draw the source/detector wedge
     t0 = -a0*np.pi/180
